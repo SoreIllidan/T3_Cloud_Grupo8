@@ -10,7 +10,7 @@ Descripción breve del proyecto.
 
 ## 🖥️ **Frontend**
 Link: del repositorio frontend https://github.com/SoreIllidan/Porlles_Frontend/
-![Vista del Frontend](./docs/images/frontend-preview.png)
+![Vista del Frontend](https://media.discordapp.net/attachments/1111808588231479369/1439262678492381306/Angularjsoldicon.png?ex=6919e152&is=69188fd2&hm=0b55a1b1e3d0ba981fe66e363d48356665f5a03ccec1f84a1b50bd455c8aa7b3&=&format=webp&quality=lossless&width=622&height=659))
 
 ## ⚙️ **Backend**
 ![Arquitectura del Backend](./docs/images/backend-architecture.png)
