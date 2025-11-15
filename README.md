@@ -6,17 +6,24 @@ Descripción breve del proyecto.
 
 ---
 
-# 🖼️ **VISTA PREVIA**
+# 🛠️ **TECNOLOGÍAS UTILIZADAS**
+
+- Google cloud
+- Angular  
+- Spring Boot  
+- MySQL
+
+![Logo del Proyecto](https://media.discordapp.net/attachments/1111808588231479369/1439295337390018640/78ca285e-7cf5-4c1c-88ed-92361a0f3fdb.png?ex=6919ffbd&is=6918ae3d&hm=a52213284c7a3a50398e541788e82978b367d2fd120783f470a52303c6302b6e&=&format=webp&quality=lossless&width=820&height=547)
+
+---
+
+# 🖼️ **Repositorios**
 
 ## 🖥️ **Frontend**
 Link: del repositorio frontend https://github.com/SoreIllidan/Porlles_Frontend/
-![Vista del Frontend](https://media.discordapp.net/attachments/1111808588231479369/1439262678492381306/Angularjsoldicon.png?ex=6919e152&is=69188fd2&hm=0b55a1b1e3d0ba981fe66e363d48356665f5a03ccec1f84a1b50bd455c8aa7b3&=&format=webp&quality=lossless&width=622&height=659))
 
 ## ⚙️ **Backend**
-![Arquitectura del Backend](./docs/images/backend-architecture.png)
-
-## 💾 **Base de Datos**
-![Diagrama ER](./docs/images/db-schema.png)
+Link: del repositorio backend https://github.com/SoreIllidan/Porlles_Frontend/
 
 ---
 
@@ -41,15 +48,7 @@ Link: del repositorio frontend https://github.com/SoreIllidan/Porlles_Frontend/
 
 ---
 
-# 🛠️ **TECNOLOGÍAS UTILIZADAS**
 
-- Angular  
-- Spring Boot  
-- MySQL  
-- Docker (opcional)  
-- Maven  
-
----
 
 # 🚀 **EJECUCIÓN LOCAL**
 
