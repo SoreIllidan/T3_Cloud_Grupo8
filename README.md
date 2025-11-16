@@ -119,24 +119,7 @@ npm install
 ng serve -o
 ```
 
-O:
-```bash
-npm start
-```
-
 El frontend estará disponible en: **http://localhost:4200**
-
-> **Nota:** El navegador se abrirá automáticamente con la opción `-o`.
-
----
-
-## ✅ **Verificación**
-
-Una vez iniciados ambos servicios:
-
-1. **Backend:** http://localhost:8080
-2. **Frontend:** http://localhost:4200
-3. **Base de datos:** Debe tener las tablas creadas automáticamente en `ImportPorllesDB`
 
 ---
 
