@@ -82,20 +82,10 @@ cd Backend
 mvnw clean install
 ```
 
-O en Linux/Mac:
-```bash
-./mvnw clean install
-```
-
 ### Ejecutar Backend
 
 ```bash
 mvnw spring-boot:run
-```
-
-O en Linux/Mac:
-```bash
-./mvnw spring-boot:run
 ```
 
 El backend estará disponible en: **http://localhost:8080**
