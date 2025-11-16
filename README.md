@@ -125,9 +125,42 @@ El frontend estará disponible en: **http://localhost:4200**
 
 # ☁️ **DESPLIEGUE EN LA NUBE**
 
-## 📤 **Backend (Google Cloud)**
+## 📤 **Backend (Compute Engine - Windows Server)**
 
-### Construcción del JAR
+El backend se despliega en una **VM de Windows Server en Compute Engine**, utilizando **IIS (Internet Information Services)** como servidor web con el módulo **HttpPlatformHandler** para ejecutar la aplicación Spring Boot.
+
+### 1. Crear la VM en Compute Engine
+
+1. Ve a **Compute Engine → Instancias de VM**.
+2. Haz clic en **"Crear instancia"**.
+3. **Configuración recomendada:**
+   - **Nombre:** `windows-server-cloud-computing`
+   - **Región:** `southamerica-west1` (Santiago, Chile) - misma región que Cloud SQL
+   - **Zona:** `southamerica-west1-a`
+   - **Tipo de máquina:** e2-medium (2 vCPU, 4 GB memoria) o superior
+   - **Disco de arranque:** Windows Server 2022 Datacenter (50 GB SSD)
+   - **Firewall:** ✅ Permitir tráfico HTTP y HTTPS
+
+4. En **"Identidad y acceso a las API"**, selecciona **"Permitir acceso completo a todas las API de Cloud"**.
+5. Haz clic en **"Crear"**.
+
+### 2. Configurar Reglas de Firewall
+
+Para permitir acceso al backend en el puerto 8080:
+
+1. Ve a **VPC Network → Firewall**.
+2. Haz clic en **"Crear regla de firewall"**.
+3. **Configuración:**
+   - **Nombre:** `allow-backend-8080`
+   - **Dirección del tráfico:** Entrada
+   - **Destinos:** Todas las instancias de la red
+   - **Filtro de origen:** Rangos de IPv4: `0.0.0.0/0`
+   - **Protocolos y puertos:** tcp:`8080`
+4. Haz clic en **"Crear"**.
+
+### 3. Construcción del JAR
+
+En tu máquina local:
 
 ```bash
 cd Backend
@@ -136,69 +169,262 @@ mvnw clean package -DskipTests
 
 El archivo JAR se generará en: `Backend/target/sbootporlles-0.0.1-SNAPSHOT.jar`
 
-### Variables de entorno necesarias (Google Cloud Run/Compute Engine)
+### 4. Subir el JAR a la VM
 
-```bash
-DB_HOST=tu_ip_cloudsql
-DB_PORT=3306
-DB_NAME=ImportPorllesDB
-DB_USER=root
-DB_PASSWORD=tu_contraseña
-UPLOAD_PATH=/var/uploads/porlles
-PORT=8080
+Conéctate a la VM mediante RDP y transfiere el archivo JAR. Crea una carpeta:
+
+```powershell
+C:\App\backend\
 ```
 
-### Desplegar con Docker (Opcional)
+Coloca el archivo JAR en esta carpeta.
+
+### 5. Configurar application-prod.properties
+
+Crea o edita el archivo `application-prod.properties` en la VM:
+
+```properties
+spring.datasource.url=jdbc:mysql://127.0.0.1:3306/ImportPorllesDB?allowPublicKeyRetrieval=true&useSSL=false
+spring.datasource.username=root
+spring.datasource.password=tu_contraseña_segura
+spring.jpa.hibernate.ddl-auto=validate
+spring.jpa.show-sql=false
+server.port=8080
+
+# CORS - IP Externa de la VM o dominio del frontend
+cors.allowed-origins=http://34.176.162.36,https://tu-dominio-firebase.web.app
+
+# File Upload
+file.upload.path=C:\App\uploads
+file.max-size=10485760
+```
+
+### 6. Instalar Java en la VM
+
+1. Descarga **Java 21** desde: https://adoptium.net/
+2. Instala el JDK en `C:\Program Files\Eclipse Adoptium\jdk-21.0.x\`
+3. Verifica la instalación:
+
+```powershell
+java -version
+```
+
+### 7. Configurar IIS con HttpPlatformHandler
+
+#### Instalar IIS:
+
+1. Abre **Server Manager** → **Add roles and features**.
+2. Selecciona **Web Server (IIS)**.
+3. Instala con las opciones por defecto.
+
+#### Instalar HttpPlatformHandler:
+
+1. Descarga desde: https://www.iis.net/downloads/microsoft/httpplatformhandler
+2. Instala el módulo en IIS.
+
+#### Crear el sitio web en IIS:
+
+1. Abre **IIS Manager**.
+2. Clic derecho en **Sites → Add Website**.
+3. **Configuración:**
+   - **Site name:** `BackendPorlles`
+   - **Physical path:** `C:\App\backend`
+   - **Binding:** Port `8080`, IP: `*` (todas las IPs)
+4. Haz clic en **OK**.
+
+#### Crear web.config:
+
+En `C:\App\backend\`, crea un archivo `web.config`:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+  <system.webServer>
+    <handlers>
+      <add name="httpPlatformHandler" path="*" verb="*" 
+           modules="httpPlatformHandler" 
+           resourceType="Unspecified" />
+    </handlers>
+    <httpPlatform processPath="C:\Program Files\Eclipse Adoptium\jdk-21.0.x\bin\java.exe"
+                  arguments="-jar &quot;C:\App\backend\sbootporlles-0.0.1-SNAPSHOT.jar&quot; --spring.profiles.active=prod"
+                  stdoutLogEnabled="true"
+                  stdoutLogFile="C:\App\logs\stdout.log"
+                  startupTimeLimit="60"
+                  startupRetryCount="3">
+      <environmentVariables>
+        <environmentVariable name="SPRING_PROFILES_ACTIVE" value="prod" />
+      </environmentVariables>
+    </httpPlatform>
+  </system.webServer>
+</configuration>
+```
+
+### 8. Configurar Cloud SQL Auth Proxy como Servicio
+
+Para que el proxy se ejecute automáticamente:
+
+#### Descargar NSSM (Non-Sucking Service Manager):
+
+```powershell
+# Descarga desde: https://nssm.cc/download
+# Extrae a C:\Tools\nssm-2.24\win64\nssm.exe
+```
+
+#### Descargar Cloud SQL Auth Proxy:
+
+```powershell
+# Descarga desde: https://cloud.google.com/sql/docs/mysql/connect-instance-auth-proxy#windows-64-bit
+# Guarda en: C:\App\cloud-sql-proxy.exe
+```
+
+#### Crear el servicio:
+
+```powershell
+cd C:\Tools\nssm-2.24\win64
+
+.\nssm.exe install CloudSQLProxy "C:\App\cloud-sql-proxy.exe" "--private-ip" "--port" "3306" "proyectocloudcomputing-475904:southamerica-west1:porlles-bd"
+
+# Configurar el servicio para inicio automático
+.\nssm.exe set CloudSQLProxy Start SERVICE_AUTO_START
+
+# Iniciar el servicio
+.\nssm.exe start CloudSQLProxy
+
+# Verificar el estado
+.\nssm.exe status CloudSQLProxy
+```
+
+### 9. Iniciar el Backend
+
+Reinicia el sitio web en IIS o reinicia la VM. El backend estará disponible en:
+
+```
+http://IP_EXTERNA_VM:8080
+```
+
+### 10. Verificación
+
+Prueba el endpoint:
 
 ```bash
-docker build -t porlles-backend .
-docker run -p 8080:8080 \
-  -e DB_HOST=tu_ip_cloudsql \
-  -e DB_USER=root \
-  -e DB_PASSWORD=tu_contraseña \
-  porlles-backend
+curl http://IP_EXTERNA_VM:8080/api/health
 ```
 
 ---
 
-## 📤 **Frontend (Vercel / Firebase Hosting)**
+## 📤 **Frontend (Firebase Hosting)**
 
-### Build de producción
+El frontend se despliega en **Firebase Hosting**, un servicio de hosting rápido y seguro con CDN global.
+
+### 1. Configurar URL de Producción
+
+Edita `Frontend/src/environments/environment.prod.ts` con la IP externa de tu VM:
+
+```typescript
+export const environment = {
+  production: true,
+  apiUrl: 'http://34.176.162.36:8080/api',  // Reemplaza con tu IP externa
+  uploadUrl: 'http://34.176.162.36:8080/api/upload'
+};
+```
+
+### 2. Build de Producción
 
 ```bash
 cd Frontend
 ng build --configuration production
 ```
 
-La carpeta de distribución se generará en: `Frontend/dist/proyectosoluciones/`
+La carpeta de distribución se generará en: `Frontend/dist/proyectosoluciones/browser/`
 
-### Configurar URL de producción
-
-Edita `Frontend/src/environments/environment.prod.ts`:
-
-```typescript
-export const environment = {
-  production: true,
-  apiUrl: 'http://tu-ip-backend:8080/api',
-  uploadUrl: 'http://tu-ip-backend:8080/api/upload'
-};
-```
-
-### Desplegar en Firebase
+### 3. Instalar Firebase CLI
 
 ```bash
 npm install -g firebase-tools
+```
+
+### 4. Login en Firebase
+
+```bash
 firebase login
+```
+
+Se abrirá tu navegador para autenticarte con tu cuenta de Google.
+
+### 5. Inicializar Firebase en el Proyecto
+
+```bash
 firebase init
+```
+
+**Configuración:**
+
+1. **¿Qué características quieres configurar?** → Selecciona `Hosting`
+2. **¿Qué proyecto quieres usar?** → Selecciona tu proyecto o crea uno nuevo
+3. **¿Cuál es tu directorio público?** → `dist/proyectosoluciones/browser`
+4. **¿Configurar como SPA?** → `Yes`
+5. **¿Sobrescribir index.html?** → `No`
+
+### 6. Desplegar en Firebase
+
+```bash
 firebase deploy
 ```
 
-### Desplegar en Vercel
+Al finalizar, verás la URL de tu aplicación:
 
-```bash
-npm install -g vercel
-vercel
 ```
+Hosting URL: https://tu-proyecto.web.app
+```
+
+### 7. Configurar CORS en el Backend
+
+Actualiza el archivo `application-prod.properties` en la VM para permitir tu dominio de Firebase:
+
+```properties
+cors.allowed-origins=https://tu-proyecto.web.app,https://tu-proyecto.firebaseapp.com
+```
+
+Reinicia el backend en IIS.
+
+### 8. (Opcional) Configurar Dominio Personalizado
+
+1. Ve a **Firebase Console → Hosting**.
+2. Haz clic en **"Agregar dominio personalizado"**.
+3. Sigue las instrucciones para configurar los registros DNS.
+
+---
+
+## 🔄 **Actualizar el Despliegue**
+
+### Backend:
+
+1. Construye el nuevo JAR:
+   ```bash
+   cd Backend
+   mvnw clean package -DskipTests
+   ```
+
+2. Transfiere el JAR a la VM (reemplaza el existente en `C:\App\backend\`).
+
+3. Reinicia el sitio en IIS:
+   ```powershell
+   # En la VM
+   iisreset
+   ```
+
+### Frontend:
+
+1. Construye la nueva versión:
+   ```bash
+   cd Frontend
+   ng build --configuration production
+   ```
+
+2. Despliega en Firebase:
+   ```bash
+   firebase deploy
+   ```
 
 ---
 
@@ -288,6 +514,67 @@ spring.datasource.password=tu_contraseña_segura
 
 ---
 
+# 🏗️ **ARQUITECTURA DEL SISTEMA**
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     GOOGLE CLOUD PLATFORM                       │
+│                                                                 │
+│  ┌──────────────────┐         ┌─────────────────────────────┐  │
+│  │  Firebase        │         │   Compute Engine (VM)       │  │
+│  │  Hosting         │────────▶│   Windows Server 2022       │  │
+│  │                  │  HTTP   │                             │  │
+│  │  (Frontend)      │         │  ┌───────────────────────┐  │  │
+│  │  Angular 19      │         │  │  IIS + HttpPlatform   │  │  │
+│  └──────────────────┘         │  │  Handler              │  │  │
+│                               │  └───────────────────────┘  │  │
+│                               │           │                 │  │
+│                               │  ┌────────▼──────────────┐  │  │
+│                               │  │  Spring Boot 3.5      │  │  │
+│                               │  │  (Backend API)        │  │  │
+│                               │  │  Puerto: 8080         │  │  │
+│                               │  └────────┬──────────────┘  │  │
+│                               │           │                 │  │
+│                               │  ┌────────▼──────────────┐  │  │
+│                               │  │  Cloud SQL Auth Proxy │  │  │
+│                               │  │  (Servicio Windows)   │  │  │
+│                               │  │  localhost:3306       │  │  │
+│                               │  └────────┬──────────────┘  │  │
+│                               └───────────┼─────────────────┘  │
+│                                           │                    │
+│                                           │ IP Privada         │
+│                                           │ (VPC Network)      │
+│                                           │                    │
+│                               ┌───────────▼─────────────────┐  │
+│                               │   Cloud SQL (MySQL 8.0)     │  │
+│                               │   Alta Disponibilidad       │  │
+│                               │   ImportPorllesDB           │  │
+│                               └─────────────────────────────┘  │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+
+**Características de Seguridad:**
+
+✅ **Conexión Privada:** La VM y Cloud SQL se comunican por IP privada (sin exponer la BD)
+✅ **Cloud SQL Auth Proxy:** Autenticación segura con credenciales de Google Cloud
+✅ **Firewall Rules:** Control de acceso granular a nivel de red
+✅ **JWT Authentication:** Tokens seguros para autenticación de usuarios
+✅ **CORS Configurado:** Solo dominios autorizados pueden acceder al backend
+✅ **HTTPS en Firebase:** Certificado SSL automático para el frontend
+```
+
+**Flujo de una petición:**
+
+1. Usuario accede al frontend en Firebase Hosting (HTTPS)
+2. Angular realiza petición HTTP al backend en la VM (puerto 8080)
+3. IIS recibe la petición y la pasa al proceso Java (Spring Boot)
+4. Spring Boot se conecta a `localhost:3306` (Cloud SQL Auth Proxy)
+5. El proxy establece conexión segura con Cloud SQL vía IP privada
+6. Cloud SQL ejecuta la consulta y devuelve los datos
+7. La respuesta se envía de vuelta al frontend
+
+---
+
 # 📘 **COMANDOS FRECUENTES**
 
 ### Angular
@@ -364,6 +651,122 @@ Porlles/
 - **CORS:** Configurado para desarrollo y producción
 - **Upload de archivos:** Máximo 10MB
 - **Extensiones permitidas:** PDF, DOC, DOCX, XLS, XLSX, JPG, JPEG, PNG, ZIP
+
+---
+
+# 🔧 **TROUBLESHOOTING**
+
+### Backend no se conecta a la base de datos
+
+**Problema:** `Communications link failure`
+
+**Solución:**
+
+1. Verifica que el servicio Cloud SQL Auth Proxy esté corriendo:
+   ```powershell
+   nssm status CloudSQLProxy
+   ```
+
+2. Revisa los logs del proxy:
+   ```powershell
+   Get-Content C:\App\logs\proxy.log -Tail 50
+   ```
+
+3. Verifica que la VM tenga permisos para acceder a Cloud SQL:
+   - Ve a **Compute Engine → VM → Editar**
+   - En "Permisos de acceso", debe estar "Permitir acceso completo a todas las API"
+
+4. Verifica que Cloud SQL tenga IP privada habilitada:
+   - Ve a **Cloud SQL → Conexiones → Redes**
+   - Debe estar marcada la casilla "IP privada"
+
+### Frontend no puede conectarse al backend
+
+**Problema:** `CORS error` o `Connection refused`
+
+**Solución:**
+
+1. Verifica que la regla de firewall para el puerto 8080 esté activa:
+   ```bash
+   gcloud compute firewall-rules list --filter="name=allow-backend-8080"
+   ```
+
+2. Verifica que el backend esté corriendo:
+   ```powershell
+   # En la VM
+   netstat -ano | findstr :8080
+   ```
+
+3. Verifica la configuración de CORS en `application-prod.properties`:
+   ```properties
+   cors.allowed-origins=https://tu-proyecto.web.app
+   ```
+
+### IIS no inicia la aplicación
+
+**Problema:** Error 500 o "Service Unavailable"
+
+**Solución:**
+
+1. Revisa los logs de IIS:
+   ```powershell
+   Get-Content C:\App\logs\stdout.log -Tail 50
+   ```
+
+2. Verifica que la ruta de Java en `web.config` sea correcta:
+   ```powershell
+   Test-Path "C:\Program Files\Eclipse Adoptium\jdk-21.0.x\bin\java.exe"
+   ```
+
+3. Verifica que el archivo JAR exista:
+   ```powershell
+   Test-Path "C:\App\backend\sbootporlles-0.0.1-SNAPSHOT.jar"
+   ```
+
+4. Reinicia IIS:
+   ```powershell
+   iisreset
+   ```
+
+### El servicio Cloud SQL Proxy no inicia
+
+**Problema:** El servicio falla al iniciar
+
+**Solución:**
+
+1. Verifica el nombre de conexión:
+   ```powershell
+   # Debe ser: proyectocloudcomputing-475904:southamerica-west1:porlles-bd
+   ```
+
+2. Reinstala el servicio:
+   ```powershell
+   cd C:\Tools\nssm-2.24\win64
+   .\nssm.exe stop CloudSQLProxy
+   .\nssm.exe remove CloudSQLProxy confirm
+   .\nssm.exe install CloudSQLProxy "C:\App\cloud-sql-proxy.exe" "--private-ip" "--port" "3306" "proyectocloudcomputing-475904:southamerica-west1:porlles-bd"
+   .\nssm.exe start CloudSQLProxy
+   ```
+
+### Cambios en el código no se reflejan
+
+**Backend:**
+```bash
+# Reconstruir JAR
+cd Backend
+mvnw clean package -DskipTests
+
+# Transferir a VM y reiniciar IIS
+iisreset
+```
+
+**Frontend:**
+```bash
+# Reconstruir y redesplegar
+cd Frontend
+ng build --configuration production
+firebase deploy
+```
 
 ---
 
