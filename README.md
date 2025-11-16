@@ -50,13 +50,13 @@ Link: del repositorio backend https://github.com/SoreIllidan/Porlles_Frontend/
 
 ```sql
 CREATE DATABASE ImportPorllesDB;
+```
 ---
 
 ## ⚙️ **2. Backend (Spring Boot)**
 
 ### Archivo `application.properties`
 
-```
 spring.datasource.url=jdbc:mysql://localhost:3306/nombre_bd
 spring.datasource.username=usuario
 spring.datasource.password=contraseña
