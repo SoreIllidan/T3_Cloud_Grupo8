@@ -30,12 +30,12 @@ Link: del repositorio backend https://github.com/SoreIllidan/Porlles_Frontend/
 
 # 🚀 **EJECUCIÓN LOCAL**
 
+## 🔧 **1. Base de Datos (MySQL)**
+
 PASOS:
 
 1.Primero instalamos Mysql Workbench 
 2.Ingresamos a una conexión deseada y ejecutamos el siguiente comando
-
-## 🔧 **1. Base de Datos (MySQL)**
 
 ### Crear Base de Datos
 ```sql
