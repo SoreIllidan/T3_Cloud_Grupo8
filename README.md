@@ -184,19 +184,20 @@ Colocamos el archivo JAR en esta carpeta.
 editamos el archivo `application-prod.properties`:
 
 ```properties
-spring.datasource.url=jdbc:mysql://127.0.0.1:3306/ImportPorllesDB?allowPublicKeyRetrieval=true&useSSL=false
-spring.datasource.username=root
-spring.datasource.password=tu_contraseña_segura
+spring.application.name=sbootporlles
+spring.datasource.url=jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:ImportPorllesDB}?allowPublicKeyRetrieval=true&useSSL=true&serverTimezone=UTC
+spring.datasource.username=${DB_USER:root}
+spring.datasource.password=${DB_PASSWORD:}
 spring.jpa.hibernate.ddl-auto=validate
 spring.jpa.show-sql=false
-server.port=8080
 
-# CORS - IP Externa de la VM o dominio del frontend
-cors.allowed-origins=http://34.176.162.36,https://tu-dominio-firebase.web.app
-
-# File Upload
-file.upload.path=C:\App\uploads
+file.upload.path=${UPLOAD_PATH:/var/uploads/porlles}
 file.max-size=10485760
+file.allowed-extensions=pdf,doc,docx,xls,xlsx,jpg,jpeg,png,zip
+
+cors.allowed-origins=http://34.176.162.36
+
+server.port=${PORT:8080}
 ```
 
 ### 6. Instalar Java en la VM
