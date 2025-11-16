@@ -73,7 +73,7 @@ spring.jpa.show-sql=true
 server.port=8080
 ```
 
-> **Importante:** Cambia `spring.datasource.password` por tu contraseña de MySQL.
+> **Importante:** Cambiar `spring.datasource.password` por la contraseña del MySQL.
 
 ### Instalar Dependencias
 
