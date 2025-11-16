@@ -336,7 +336,7 @@ C:\inetpub\wwwroot\
 
 ### 5. Configurar web.config para SPA
 
-En `C:\inetpub\wwwroot\`, crea o edita el archivo `web.config` para habilitar el enrutamiento de Angular y el proxy inverso:
+En `C:\inetpub\wwwroot\`, creamos o editamos el archivo `web.config` para habilitar el enrutamiento de Angular y el proxy inverso:
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -377,15 +377,15 @@ En `C:\inetpub\wwwroot\`, crea o edita el archivo `web.config` para habilitar el
 El módulo URL Rewrite es necesario para que funcione el proxy inverso:
 
 1. Descargamos desde: https://www.iis.net/downloads/microsoft/url-rewrite
-2. Instala el módulo en IIS.
-3. Reinicia IIS:
+2. Instalamos el módulo en IIS.
+3. Reiniciamos IIS:
    ```powershell
    iisreset
    ```
 
 ### 7. Verificación
 
-Accede al frontend desde tu navegador:
+Accedemos al frontend desde tu navegador:
 
 ```
 http://34.176.162.36
@@ -403,8 +403,8 @@ En este proyecto, el backend no se conecta a la base de datos mediante una IP p�
 **Configuración para Producción:**
 
 - Establecemos una **contraseña** para el usuario `root`.
-- En **"Elige la región y la disponibilidad zonal"**, selecciona **"Varias zonas (con alta disponibilidad)"**. Esto crea una réplica para tolerancia a fallos.
-- En **"Personaliza tu instancia"**, ajusta los núcleos (vCPU) y la RAM a un tamaño adecuado para empezar (ej. 2 vCPU, 8 GB RAM).
+- En **"Elige la región y la disponibilidad zonal"**, seleccionamos **"Varias zonas (con alta disponibilidad)"**. Esto crea una réplica para tolerancia a fallos.
+- En **"Personaliza tu instancia"**, ajustamnos los núcleos (vCPU) y la RAM a un tamaño adecuado para empezar (ej. 2 vCPU, 8 GB RAM).
 
 ### 2. Configuración de Red (IP Privada)
 
@@ -432,7 +432,7 @@ La VM necesita permiso para autenticarse con la API de Cloud SQL:
 El proxy es un "túnel" seguro que se ejecuta en la VM y se conecta a la BD.
 
 1. **Descargamos el ejecutable del Cloud SQL Auth Proxy** (`cloud-sql-proxy.exe`) en la VM de Windows desde: https://cloud.google.com/sql/docs/mysql/sql-proxy
-2. Obtenemos el **"Nombre de conexión de la instancia"** desde la página de "Descripción general" de tu instancia de Cloud SQL (formato: `proyecto:region:instancia`).
+2. Obtenemos el **"Nombre de conexión de la instancia"** desde la página de "Descripción general" de la instancia de Cloud SQL.
 3. Ejecutamos el proxy. Para producción, se recomienda configurarlo como un **servicio de Windows**
 
 **Comando para ejecutar el proxy:**
@@ -449,7 +449,8 @@ El proxy es un "túnel" seguro que se ejecuta en la VM y se conecta a la BD.
 # 👥 **EQUIPO - GRUPO 8**
 
 **Curso:** Cloud Computing y Continuidad  
-**Institución:** [Tu institución]  
+**Institución:** Universidad Privada del Norte  
+**Institución:** Sebastian Dongo Quezada, Karen Rozas Valera, Alejandro Palma Tafur, Fabrizio Reyna Arce, Omar Palomino Galvez.
 **Año:** 2025
 
 
