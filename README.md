@@ -34,11 +34,17 @@ Link: del repositorio backend https://github.com/SoreIllidan/Porlles_Frontend/
 
 ## 📋 **Requisitos Previos**
 
-- **Java 21** o superior
-- **Node.js 18** o superior
-- **MySQL 8.0** o superior
-- **Maven 3.6** o superior (incluido en el proyecto como `mvnw`)
+- **Java 21** (OpenJDK o Oracle JDK)
+  - Descarga desde: https://www.oracle.com/java/technologies/downloads/#java21
+  - O Adoptium: https://adoptium.net/
+- **Node.js 20 LTS** o superior
+  - Descarga desde: https://nodejs.org/
+  - Incluye npm automáticamente
+- **MySQL 8.0** o superior (para desarrollo local)
+- **Maven** (incluido en el proyecto como `mvnw`)
 - **Angular CLI** (`npm install -g @angular/cli`)
+- **Google Cloud SDK** (para despliegue en producción)
+  - Descarga desde: https://cloud.google.com/sdk/docs/install
 
 ---
 
@@ -75,20 +81,48 @@ server.port=8080
 
 > **Importante:** Cambiar `spring.datasource.password` por la contraseña del MySQL.
 
-### Instalar Dependencias
+### Instalar Dependencias y Compilar
 
-```bash
+**Windows PowerShell:**
+```powershell
+# Configurar JAVA_HOME (ajusta la ruta según tu instalación)
+$env:JAVA_HOME = "C:\Program Files\Java\jdk-21"
+$env:Path = "$env:JAVA_HOME\bin;$env:Path"
+
+# Verificar versión de Java
+java -version
+
+# Compilar proyecto
 cd Backend
-mvnw clean install
+.\mvnw clean install
+```
+
+**Linux/Mac:**
+```bash
+# Verificar Java
+java -version
+
+# Compilar proyecto
+cd Backend
+./mvnw clean install
 ```
 
 ### Ejecutar Backend
 
 ```bash
-mvnw spring-boot:run
+.\mvnw spring-boot:run
 ```
 
 El backend estará disponible en: **http://localhost:8080**
+
+### Build para Producción (JAR)
+
+```powershell
+# Limpiar y compilar sin tests
+.\mvnw clean package -DskipTests
+```
+
+El archivo JAR se generará en: `Backend/target/sbootporlles-0.0.1-SNAPSHOT.jar`
 
 ---
 
@@ -113,13 +147,40 @@ cd Frontend
 npm install
 ```
 
-### Ejecutar Frontend
+> **Nota:** Si el comando `ng` no se reconoce, instala Angular CLI globalmente:
+> ```bash
+> npm install -g @angular/cli
+> ```
+
+### Ejecutar Frontend en Desarrollo
 
 ```bash
 ng serve -o
 ```
 
 El frontend estará disponible en: **http://localhost:4200**
+
+### Build para Producción
+
+**Antes de compilar**, asegúrate de configurar la URL correcta del backend en `src/environments/environment.prod.ts`:
+
+```typescript
+export const environment = {
+  production: true,
+  apiUrl: 'http://34.176.162.36:8080/api',  // IP de tu servidor
+  uploadUrl: 'http://34.176.162.36:8080/api/upload',
+  maxFileSize: 10485760, // 10MB
+  allowedExtensions: ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'jpg', 'jpeg', 'png', 'zip']
+};
+```
+
+**Compilar:**
+
+```bash
+ng build --configuration production
+```
+
+Los archivos compilados estarán en: `Frontend/dist/proyectosoluciones/`
 
 ---
 
@@ -160,44 +221,109 @@ Para permitir acceso al backend en el puerto 8080:
 
 ### 3. Construcción del JAR
 
-En tu máquina local:
+En tu máquina local con PowerShell:
 
-```bash
+```powershell
+# Configurar JAVA_HOME para Maven
+$env:JAVA_HOME = "C:\Program Files\Java\jdk-21"
+$env:Path = "$env:JAVA_HOME\bin;$env:Path"
+
+# Limpiar caché de Maven (solo si hay problemas de versión)
+# Remove-Item -Recurse -Force "$env:USERPROFILE\.m2" -ErrorAction SilentlyContinue
+
+# Compilar el proyecto
 cd Backend
-mvnw clean package -DskipTests
+.\mvnw clean package -DskipTests
 ```
 
 El archivo JAR se generará en: `Backend/target/sbootporlles-0.0.1-SNAPSHOT.jar`
 
+> **Troubleshooting:** Si ves errores de versión de Java (`class file has wrong version`), asegúrate de que `JAVA_HOME` apunte a Java 21 y limpia el caché de Maven como se muestra arriba.
+
 ### 4. Subir el JAR a la VM
 
-Conéctate a la VM mediante RDP y transfiere el archivo JAR. Crea una carpeta:
+**Opción A: Usando gcloud CLI (Recomendado)**
 
 ```powershell
-C:\App\backend\
+# Verificar instancias disponibles
+gcloud compute instances list
+
+# Subir el JAR al servidor
+gcloud compute scp "C:\Users\TU_USUARIO\Desktop\Porlles\Backend\target\sbootporlles-0.0.1-SNAPSHOT.jar" windows-server-cloud-computing:C:\backend\ --zone=southamerica-west1-a
 ```
 
-Coloca el archivo JAR en esta carpeta.
+> **Nota:** La primera vez que uses `gcloud compute scp`, se te pedirá crear un directorio SSH y generar claves. Acepta con `Y`.
 
-### 5. Configurar application-prod.properties
+**Opción B: Usando RDP**
 
-Crea o edita el archivo `application-prod.properties` en la VM:
+1. Conéctate a la VM mediante RDP (Remote Desktop)
+2. Transfiere el archivo JAR manualmente
+3. Crea la carpeta: `C:\App\backend\`
+4. Coloca el archivo JAR en esta carpeta
 
+### 5. Configurar Archivos de Properties
+
+El proyecto utiliza perfiles de Spring Boot para manejar diferentes entornos:
+
+**Archivo principal: `application.properties`**
 ```properties
-spring.datasource.url=jdbc:mysql://127.0.0.1:3306/ImportPorllesDB?allowPublicKeyRetrieval=true&useSSL=false
+spring.application.name=sbootporlles
+
+# Perfil activo (cambiar a 'prod' en producción)
+spring.profiles.active=dev
+
+# Configuración común para todos los perfiles
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQLDialect
+
+# Configuración de subida de archivos
+spring.servlet.multipart.enabled=true
+spring.servlet.multipart.max-file-size=10MB
+spring.servlet.multipart.max-request-size=10MB
+```
+
+**Desarrollo: `application-dev.properties`**
+```properties
+spring.datasource.url=jdbc:mysql://localhost:3306/ImportPorllesDB?allowPublicKeyRetrieval=true&useSSL=false
+spring.datasource.username=root
+spring.datasource.password=
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
+
+# File Upload Configuration
+file.upload.path=./uploads
+file.max-size=10485760
+file.allowed-extensions=pdf,doc,docx,xls,xlsx,jpg,jpeg,png,zip
+
+# CORS Configuration
+cors.allowed-origins=http://localhost:4200
+
+# Server Port
+server.port=8080
+```
+
+**Producción: `application-prod.properties`** (en la VM)
+```properties
+spring.datasource.url=jdbc:mysql://localhost:3306/ImportPorllesDB?allowPublicKeyRetrieval=true&useSSL=false
 spring.datasource.username=root
 spring.datasource.password=tu_contraseña_segura
 spring.jpa.hibernate.ddl-auto=validate
 spring.jpa.show-sql=false
-server.port=8080
 
-# CORS - IP Externa de la VM o dominio del frontend
-cors.allowed-origins=http://34.176.162.36,https://tu-dominio-firebase.web.app
-
-# File Upload
+# File Upload Configuration
 file.upload.path=C:\App\uploads
 file.max-size=10485760
+file.allowed-extensions=pdf,doc,docx,xls,xlsx,jpg,jpeg,png,zip
+
+# CORS Configuration - IP Externa de la VM
+cors.allowed-origins=http://34.176.162.36
+
+# Server Port
+server.port=8080
 ```
+
+> **Importante:** Asegúrate de que `cors.allowed-origins` coincida con la IP/dominio desde donde se accede al frontend.
 
 ### 6. Instalar Java en la VM
 
@@ -316,16 +442,48 @@ curl http://IP_EXTERNA_VM:8080/api/health
 
 El frontend se despliega en **Firebase Hosting**, un servicio de hosting rápido y seguro con CDN global.
 
-### 1. Configurar URL de Producción
+### 1. Configurar Environments de Angular
 
-Edita `Frontend/src/environments/environment.prod.ts` con la IP externa de tu VM:
+El proyecto utiliza environments para manejar diferentes configuraciones:
 
+**Desarrollo: `src/environments/environment.ts`**
+```typescript
+export const environment = {
+  production: false,
+  apiUrl: 'http://localhost:8080/api',
+  uploadUrl: 'http://localhost:8080/api/upload',
+  maxFileSize: 10485760, // 10MB
+  allowedExtensions: ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'jpg', 'jpeg', 'png', 'zip']
+};
+```
+
+**Producción: `src/environments/environment.prod.ts`**
 ```typescript
 export const environment = {
   production: true,
   apiUrl: 'http://34.176.162.36:8080/api',  // Reemplaza con tu IP externa
-  uploadUrl: 'http://34.176.162.36:8080/api/upload'
+  uploadUrl: 'http://34.176.162.36:8080/api/upload',
+  maxFileSize: 10485760, // 10MB
+  allowedExtensions: ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'jpg', 'jpeg', 'png', 'zip']
 };
+```
+
+**Configurar `angular.json`** para usar environments:
+
+Asegúrate de que en `angular.json` esté configurado el reemplazo de archivos:
+
+```json
+"configurations": {
+  "production": {
+    "fileReplacements": [
+      {
+        "replace": "src/environments/environment.ts",
+        "with": "src/environments/environment.prod.ts"
+      }
+    ],
+    // ... resto de configuración
+  }
+}
 ```
 
 ### 2. Build de Producción
@@ -656,6 +814,30 @@ Porlles/
 
 # 🔧 **TROUBLESHOOTING**
 
+### Error de versión de Java al compilar
+
+**Problema:** `class file has wrong version 61.0, should be 52.0`
+
+**Solución:**
+
+Este error indica que Maven está usando una versión incorrecta de Java. Java 21 es la versión correcta (61.0).
+
+```powershell
+# 1. Configurar JAVA_HOME
+$env:JAVA_HOME = "C:\Program Files\Java\jdk-21"
+$env:Path = "$env:JAVA_HOME\bin;$env:Path"
+
+# 2. Verificar versión
+java -version  # Debe mostrar "java version 21.0.x"
+
+# 3. Limpiar caché de Maven (elimina dependencias con versión incorrecta)
+Remove-Item -Recurse -Force "$env:USERPROFILE\.m2\repository\org\springframework" -ErrorAction SilentlyContinue
+
+# 4. Recompilar
+cd Backend
+.\mvnw clean package -DskipTests
+```
+
 ### Backend no se conecta a la base de datos
 
 **Problema:** `Communications link failure`
@@ -682,11 +864,16 @@ Porlles/
 
 ### Frontend no puede conectarse al backend
 
-**Problema:** `CORS error` o `Connection refused`
+**Problema:** `CORS error`, `Connection refused`, o `ERR_CONNECTION_TIMED_OUT`
 
 **Solución:**
 
-1. Verifica que la regla de firewall para el puerto 8080 esté activa:
+1. **Abrir el puerto 8080 en el firewall de Google Cloud:**
+   ```bash
+   gcloud compute firewall-rules create allow-backend-8080 --allow tcp:8080 --source-ranges 0.0.0.0/0 --description "Allow Spring Boot backend on port 8080"
+   ```
+
+2. Verifica que la regla esté activa:
    ```bash
    gcloud compute firewall-rules list --filter="name=allow-backend-8080"
    ```
@@ -699,8 +886,18 @@ Porlles/
 
 3. Verifica la configuración de CORS en `application-prod.properties`:
    ```properties
-   cors.allowed-origins=https://tu-proyecto.web.app
+   cors.allowed-origins=http://34.176.162.36
    ```
+   
+   > **Importante:** La URL debe coincidir exactamente con el origen del frontend (protocolo, dominio y puerto).
+
+4. Verifica que el environment del frontend tenga la URL correcta:
+   ```typescript
+   // src/environments/environment.prod.ts
+   apiUrl: 'http://34.176.162.36:8080/api'  // Sin barra final
+   ```
+
+5. Recompila y redesplega ambos proyectos después de cambiar las configuraciones.
 
 ### IIS no inicia la aplicación
 
@@ -751,21 +948,63 @@ Porlles/
 ### Cambios en el código no se reflejan
 
 **Backend:**
-```bash
-# Reconstruir JAR
-cd Backend
-mvnw clean package -DskipTests
+```powershell
+# 1. Configurar JAVA_HOME
+$env:JAVA_HOME = "C:\Program Files\Java\jdk-21"
+$env:Path = "$env:JAVA_HOME\bin;$env:Path"
 
-# Transferir a VM y reiniciar IIS
+# 2. Reconstruir JAR
+cd Backend
+.\mvnw clean package -DskipTests
+
+# 3. Subir a VM
+gcloud compute scp "target\sbootporlles-0.0.1-SNAPSHOT.jar" windows-server-cloud-computing:C:\backend\ --zone=southamerica-west1-a
+
+# 4. Conectarse a VM y reiniciar IIS
+gcloud compute ssh windows-server-cloud-computing --zone=southamerica-west1-a
+# Dentro de la VM:
 iisreset
 ```
 
 **Frontend:**
 ```bash
-# Reconstruir y redesplegar
+# 1. Verificar/actualizar environment.prod.ts con URL correcta
+
+# 2. Reconstruir
 cd Frontend
 ng build --configuration production
+
+# 3. Redesplegar en Firebase
 firebase deploy
+```
+
+### Node.js o npm no se reconoce
+
+**Problema:** `npm: The term 'npm' is not recognized`
+
+**Solución:**
+
+1. Instala Node.js 20 LTS desde: https://nodejs.org/
+2. Durante la instalación, asegúrate de marcar "Add to PATH"
+3. Reinicia PowerShell/Terminal
+4. Verifica:
+   ```bash
+   node --version
+   npm --version
+   ```
+
+### Angular CLI (ng) no se reconoce
+
+**Problema:** `ng: The term 'ng' is not recognized`
+
+**Solución:**
+
+```bash
+# Instalar Angular CLI globalmente
+npm install -g @angular/cli
+
+# Verificar instalación
+ng version
 ```
 
 ---
